@@ -13,7 +13,7 @@ const UserOpBuilder: React.FC<Props> = ({ transaction, onUserOpCreated }) => {
   const buildUserOp = async () => {
     const userOp = await createUserOp({
       sender,
-      nonce: parseInt(nonce),
+      nonce: BigInt(nonce),
       transaction
     });
     onUserOpCreated(userOp);

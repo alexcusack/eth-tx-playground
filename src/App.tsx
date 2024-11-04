@@ -15,12 +15,10 @@ const App: React.FC = () => {
       
       <TransactionBuilder onTransactionCreated={setTransaction} />
       
-      {transaction && (
-        <UserOpBuilder 
-          transaction={transaction} 
-          onUserOpCreated={setUserOp} 
-        />
-      )}
+      <UserOpBuilder 
+        transaction={transaction} 
+        onUserOpCreated={setUserOp} 
+      />
       
       {userOp && (
         <Signer 

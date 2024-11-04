@@ -43,9 +43,10 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
       if (!ethers.isAddress(contractAddress.trim())) return;
       
       try {
+        console.log("fetching ABI", contractAddress, process.env.REACT_APP_BASESCAN_API_KEY);
         // First, check if this is a proxy contract
         const proxyResponse = await fetch(
-          `https://api.basescan.org/api?module=contract&action=getabi&address=${contractAddress}&apikey=JWB79IQ7UQ29XZWK9K9IG3ETAQ6IU9RUMX`
+          `https://api.basescan.org/api?module=contract&action=getabi&address=${contractAddress}&apikey=${process.env.REACT_APP_BASESCAN_API_KEY}`
         );
         const proxyData = await proxyResponse.json();
         const proxyABI = JSON.parse(proxyData.result);
@@ -82,7 +83,7 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
 
           // Fetch ABI of the implementation contract
           const implResponse = await fetch(
-            `https://api.basescan.org/api?module=contract&action=getabi&address=${implementationAddress}&apikey=`
+            `https://api.basescan.org/api?module=contract&action=getabi&address=${implementationAddress}&apikey=JWB79IQ7UQ29XZWK9K9IG3ETAQ6IU9RUMX`
           );
           const implData = await implResponse.json();
           const implementationABI = JSON.parse(implData.result);
@@ -133,6 +134,7 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
       gasPrice: ethers.toBigInt(transactionDetails.gasPrice || '0'),
     };
     setUnsignedTx(tx);
+    onTransactionCreated(tx)
   }, [encodedData, contractAddress, transactionDetails]);
 
   // Sign transaction
@@ -149,6 +151,25 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
       console.error('Error signing transaction:', error);
     }
   };
+
+  // Initialize with USDC contract and transfer details
+  useEffect(() => {
+    setContractAddress('0x833589fCD6eDb6E08f4c7C32D4f71b54bdA02913'); // Base USDC
+    
+    // Once ABI is loaded and functions are available, set up transfer
+    if (availableFunctions.length > 0) {
+
+      const transferFunc = availableFunctions.find(f => f.name === 'transfer');
+      
+      if (transferFunc) {
+        setSelectedFunction(transferFunc);
+        setFunctionInputs({
+          'to': '0x3D4F5543c123da1829C02Ce1761c90e07B73853D',
+          'amount': '123000000' // 123 USDC (6 decimals)
+        });
+      }
+    }
+  }, [availableFunctions]);
 
   console.log(unsignedTx);
   return (
