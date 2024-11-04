@@ -27,7 +27,7 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
     to: '',
     value: '0',
     gasLimit: '100000',
-    gasPrice: '0',
+    gasPrice: '50',
   });
   const [unsignedTx, setUnsignedTx] = useState<TransactionRequest | null>(null);
 
@@ -39,19 +39,63 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
   // Fetch ABI from Etherscan when contract address is entered
   useEffect(() => {
     const fetchABI = async () => {
-      if (!ethers.isAddress(contractAddress)) return;
+      console.log("fetching ABI", contractAddress, !ethers.isAddress(contractAddress));
+      if (!ethers.isAddress(contractAddress.trim())) return;
       
       try {
-        const response = await fetch(
-          `https://api.basescan.org/api?module=contract&action=getabi&address=${contractAddress}&apikey=x`
+        // First, check if this is a proxy contract
+        const proxyResponse = await fetch(
+          `https://api.basescan.org/api?module=contract&action=getabi&address=${contractAddress}&apikey=JWB79IQ7UQ29XZWK9K9IG3ETAQ6IU9RUMX`
         );
-        const data = await response.json();
-        const abi = JSON.parse(data.result);
-        
-        setContractABI(abi);
-        // Filter out only functions from the ABI
-        const functions = abi.filter((item: any) => item.type === 'function');
-        setAvailableFunctions(functions);
+        const proxyData = await proxyResponse.json();
+        const proxyABI = JSON.parse(proxyData.result);
+        console.log(proxyABI);
+        // Check if this is a proxy contract by looking for typical proxy functions
+        const isProxy = proxyABI.some((item: any) => 
+          item.name === 'implementation' || 
+          item.name === 'getImplementation' ||
+          item.name === 'masterCopy'
+        );
+
+        if (isProxy) {
+        console.log("is proxy", isProxy);
+          // Create contract instance to call implementation() function
+          const provider = new ethers.JsonRpcProvider('https://mainnet.base.org');
+          const contract = new ethers.Contract(contractAddress, proxyABI, provider);
+          
+          // Try different common implementation getter methods
+          let implementationAddress;
+          try {
+            implementationAddress = await contract.implementation();
+          } catch {
+            try {
+              implementationAddress = await contract.getImplementation();
+            } catch {
+              try {
+                implementationAddress = await contract.masterCopy();
+              } catch (error) {
+                console.error('Could not find implementation address:', error);
+                return;
+              }
+            }
+          }
+
+          // Fetch ABI of the implementation contract
+          const implResponse = await fetch(
+            `https://api.basescan.org/api?module=contract&action=getabi&address=${implementationAddress}&apikey=`
+          );
+          const implData = await implResponse.json();
+          const implementationABI = JSON.parse(implData.result);
+          
+          setContractABI(implementationABI);
+          const functions = implementationABI.filter((item: any) => item.type === 'function');
+          setAvailableFunctions(functions);
+        } else {
+          // Not a proxy, use the original ABI
+          setContractABI(proxyABI);
+          const functions = proxyABI.filter((item: any) => item.type === 'function');
+          setAvailableFunctions(functions);
+        }
       } catch (error) {
         console.error('Error fetching ABI:', error);
       }
