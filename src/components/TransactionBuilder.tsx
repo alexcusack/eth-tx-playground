@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { ethers } from 'ethers';
+import { TransactionRequest } from 'ethers';
 
 interface Props {
   onTransactionCreated: (tx: any) => void;
@@ -22,6 +23,18 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
   const [selectedFunction, setSelectedFunction] = useState<ContractFunction | null>(null);
   const [functionInputs, setFunctionInputs] = useState<{[key: string]: string}>({});
   const [encodedData, setEncodedData] = useState('');
+  const [transactionDetails, setTransactionDetails] = useState({
+    to: '',
+    value: '0',
+    gasLimit: '100000',
+    gasPrice: '0',
+  });
+  const [unsignedTx, setUnsignedTx] = useState<TransactionRequest | null>(null);
+
+  function bigintReplacer(key: string, value: any) {
+    // Check if the value is a BigInt, and if so, convert it to a string
+    return typeof value === 'bigint' ? value.toString() : value;
+  }
 
   // Fetch ABI from Etherscan when contract address is entered
   useEffect(() => {
@@ -64,6 +77,36 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
     }
   }, [selectedFunction, functionInputs, contractAddress, contractABI]);
 
+  // Create transaction object
+  useEffect(() => {
+    if (!encodedData || !contractAddress) return;
+
+    const tx: TransactionRequest = {
+      to: contractAddress,
+      data: encodedData,
+      value: ethers.parseEther(transactionDetails.value || '0'),
+      gasLimit: ethers.toBigInt(transactionDetails.gasLimit),
+      gasPrice: ethers.toBigInt(transactionDetails.gasPrice || '0'),
+    };
+    setUnsignedTx(tx);
+  }, [encodedData, contractAddress, transactionDetails]);
+
+  // Sign transaction
+  const handleSign = async () => {
+    try {
+      if (!window.ethereum || !unsignedTx) return;
+      
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const signedTx = await signer.sendTransaction(unsignedTx);
+      
+      onTransactionCreated(signedTx);
+    } catch (error) {
+      console.error('Error signing transaction:', error);
+    }
+  };
+
+  console.log(unsignedTx);
   return (
     <div className="p-4">
       <div className="mb-4">
@@ -117,12 +160,63 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
       )}
 
       {encodedData && (
-        <div className="mb-4">
-          <h3 className="mb-2">Encoded Transaction Data:</h3>
-          <pre className="p-2 bg-gray-100 rounded overflow-x-auto">
-            {encodedData}
-          </pre>
-        </div>
+        <>
+          <div className="mb-4">
+            <h3 className="mb-2">Transaction Details:</h3>
+            <div className="space-y-2">
+              <div>
+                <label className="block mb-1">Value (ETH):</label>
+                <input
+                  type="text"
+                  value={transactionDetails.value}
+                  onChange={(e) => setTransactionDetails(prev => ({
+                    ...prev,
+                    value: e.target.value
+                  }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Gas Limit:</label>
+                <input
+                  type="text"
+                  value={transactionDetails.gasLimit}
+                  onChange={(e) => setTransactionDetails(prev => ({
+                    ...prev,
+                    gasLimit: e.target.value
+                  }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+              <div>
+                <label className="block mb-1">Gas Price (wei):</label>
+                <input
+                  type="text"
+                  value={transactionDetails.gasPrice}
+                  onChange={(e) => setTransactionDetails(prev => ({
+                    ...prev,
+                    gasPrice: e.target.value
+                  }))}
+                  className="w-full p-2 border rounded"
+                />
+              </div>
+            </div>
+          </div>
+
+          <div className="mb-4">
+            <h3 className="mb-2">Unsigned Transaction:</h3>
+            <pre className="p-2 bg-gray-100 rounded overflow-x-auto">
+              {unsignedTx ? JSON.stringify(unsignedTx, bigintReplacer, 2) : 'Loading...'}
+            </pre>
+          </div>
+
+          <button
+            onClick={handleSign}
+            className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
+          >
+            Sign Transaction
+          </button>
+        </>
       )}
     </div>
   );
