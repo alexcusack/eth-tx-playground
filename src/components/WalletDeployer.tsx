@@ -31,6 +31,7 @@ const WalletDeployer: React.FC = () => {
   const [nonce, setNonce] = useState<string>('0');
   const [predictedAddress, setPredictedAddress] = useState<string>('');
   const [loading, setLoading] = useState(false);
+  const [previewData, setPreviewData] = useState<string>('');
 
   const addOwnerField = () => {
     setOwners([...owners, '']);
@@ -49,14 +50,17 @@ const WalletDeployer: React.FC = () => {
 
   const isValidInput = (input: string): boolean => {
     // Check if it's a valid Ethereum address
-    if (ethers.isAddress(input)) return true;
-    // Check if it's a valid 64-byte hex string (public key)
-    return /^0x[0-9a-fA-F]{128}$/.test(input);
+    // if (ethers.isAddress(input)) return true;
+    // // Check if it's a valid 64-byte hex string (public key)
+    // return /^0x[0-9a-fA-F]{130}$/.test(input);
+    return true
+    
   };
 
   const convertToBytes = (input: string): string => {
     if (ethers.isAddress(input)) {
       // If it's an address, encode it as bytes
+    
       return ethers.AbiCoder.defaultAbiCoder().encode(['address'], [input]);
     } else {
       // If it's a public key, just return it as is (it's already in bytes format)
@@ -89,7 +93,7 @@ const WalletDeployer: React.FC = () => {
 
       // Convert inputs to bytes format
       const ownersBytes = owners.map(convertToBytes);
-      
+      console.log("here", signer)
       const tx = await factory.createAccount(ownersBytes, nonce, { value: 0 });
       await tx.wait();
       
@@ -99,6 +103,38 @@ const WalletDeployer: React.FC = () => {
       alert('Failed to deploy wallet: ' + (error as Error).message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const previewDeployment = async () => {
+    try {
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      const signer = await provider.getSigner();
+      const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, signer);
+
+      // Convert inputs to bytes format
+      const ownersBytes = owners.map(convertToBytes);
+      console.log(ownersBytes)
+      // Get the encoded function data
+      const functionData = factory.interface.encodeFunctionData("createAccount", [ownersBytes, nonce]);
+      
+      // Prepare preview data
+      const preview = {
+        to: FACTORY_ADDRESS,
+        data: functionData,
+        value: "0",
+        from: await signer.getAddress(),
+        method: "createAccount",
+        parameters: {
+          owners: owners,
+          nonce: nonce
+        }
+      };
+
+      setPreviewData(JSON.stringify(preview, null, 2));
+    } catch (error) {
+      console.error('Error generating preview:', error);
+      alert('Failed to generate preview: ' + (error as Error).message);
     }
   };
 
@@ -139,6 +175,15 @@ const WalletDeployer: React.FC = () => {
         <div className="predicted-address">
           <h3>Predicted Wallet Address:</h3>
           <code>{predictedAddress}</code>
+        </div>
+      )}
+
+      <button onClick={previewDeployment}>Preview Transaction</button>
+      
+      {previewData && (
+        <div className="preview-section">
+          <h3>Transaction Preview:</h3>
+          <pre>{previewData}</pre>
         </div>
       )}
 
