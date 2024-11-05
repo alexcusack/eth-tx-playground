@@ -5,8 +5,6 @@ const ENTRYPOINT_ABI = [
   ];
 
 
-
-
 export const createUserOp = async ({
   sender,
   nonce,
@@ -24,14 +22,14 @@ export const createUserOp = async ({
   const userOp = {
     sender,
     nonce: ethers.toBeHex(nonce),
-    initCode: '0x',
+    initCode: '',
     callData: transaction.data || '0x',
     callGasLimit: ethers.toBeHex(300000), // Adjusted for typical operations
     verificationGasLimit: ethers.toBeHex(200000),
     preVerificationGas: ethers.toBeHex(50000),
     maxFeePerGas: feeData.maxFeePerGas ? ethers.toBeHex(feeData.maxFeePerGas) : ethers.toBeHex(50000000000),
     maxPriorityFeePerGas: feeData.maxPriorityFeePerGas ? ethers.toBeHex(feeData.maxPriorityFeePerGas) : ethers.toBeHex(1500000000),
-    paymasterAndData: '0x',
+    paymasterAndData: '',
     signature: '0x'
   };
 
