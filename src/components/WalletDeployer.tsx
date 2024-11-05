@@ -141,9 +141,10 @@ const WalletDeployer: React.FC = () => {
   return (
     <div className="card">
       <h2>Deploy Smart Contract Wallet</h2>
-      
+      <p>Deploys a smart contract wallet via Coinbase's factory (0x0BA5ED0c6AA8c49038F819E587E2633c4A9F428a)</p>
       <div className="owners-section">
         <h3>Wallet Owners</h3>
+        <p>Owner address can be an EOA or a public key derived from a passkey. </p>
         {owners.map((owner, index) => (
           <div key={index} className="owner-input">
             <input

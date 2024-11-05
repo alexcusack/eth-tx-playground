@@ -13,7 +13,7 @@ const App: React.FC = () => {
 
   return (
     <div className="container">
-      <h1>Ethereum Playground</h1>
+      <h1>Eth Playground</h1>
       
       <div className="two-column-layout">
         <div className="left-column">

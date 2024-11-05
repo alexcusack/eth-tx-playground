@@ -174,6 +174,10 @@ const TransactionBuilder = ({onTransactionCreated}: Props) => {
   console.log(unsignedTx);
   return (
     <div className="p-4">
+        <h2>Transaction Builder</h2>
+        <p>Allows you to look up a contract address and have the ABI pulled in to 
+            easily construct a call to a given method on that contract. Proxy contracts are supported
+        </p>
       <div className="mb-4">
         <label className="block mb-2">Contract Address:</label>
         <input
